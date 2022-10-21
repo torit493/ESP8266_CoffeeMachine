@@ -1,46 +1,55 @@
-#pragma once
-#include "Arduino.h"
+#include <AccelStepper.h>
+#include <Servo.h>
 
-// This is the first draft for my coffee machine. It should keep track of time to brew, if brew has started, when it started. I think thats all.
-// The second version will have a class containing other objects to see if that is cleaner/better...
-// and maybe an update function which checks info on a webpage/phone if changes have been made.
+#define MAX_SPEED 500
+#define ACCELERATION 100
 
-class CoffeeMachine {
-private:
-  int coffee_hr, coffee_min; // Iwill use this determining when coffee should be made
-  bool scheduled_coffee; // This says if i want coffee to be made at given time
-  bool opened_filter; // position of filter ### I THINK THESE SHOULD NOT BE HERE IN A NICE CODE ###
-  bool power_pressed; // has power been pressed? ### I THINK THESE SHOULD NOT BE HERE IN A NICE CODE ###
-  int power_pressed_h, power_pressed_m; // hour and min of power pressed
-  bool filling_coffee; // should be true while filling coffee. filter will close again when set false after filling started. (is the plan)
-  bool new_filter; // Variable to check if a new filter is in the machine. Dont want to start brewing ontop of old coffee!
-  bool currently_brewing; // Variable used to check if the machine has been turned on. NEED TO FIGURE OUT WHEN AND HOW THIS SHOULD BE RESET...
+class CoffeeMachine : public AccelStepper, public Servo{
+  protected:
+  uint8_t IN1, IN2, IN3, IN4, power_servo_p, coffee_servo_p, vib_p;
+  // Parameters that should not change during operation:
+  const int open_filter_steps   = -1360;    //steps per rev is 2048
+  const int close_filter_steps  = 0;
+  const int zero_deg            = 0;
+  const int power_deg           = 95;
+  const int coffee_deg          = 90;
+  const int delay_time          = 100;    // milliseconds. For slowing down servo movement.
+  const int fill_time           = 3000;   // milliseconds. needs to be figured out later, maybe add one for half a litre and one for one cup?
+  const int brew_time           = 1*3600; // seconds. The amount of second it takes to finish brewing.
+  private:
+  // Constantly changing parameters:
+  bool filter_open, power_on, currently_brewing, brewing_scheduled, filter_moving;
+  int curr_hour, curr_min, brew_hour, brew_min;
 
-public:
-  // Setup class:
-  CoffeeMachine() {coffee_hr=7; coffee_min=0, scheduled_coffee=false; opened_filter=false;power_pressed=false;power_pressed_h=0;power_pressed_m=0;};
-  CoffeeMachine(int coffee_hr, int coffee_min, bool scheduled_coffee);
-  // Set functions:
+  public:
+  CoffeeMachine(int IN1, int IN2, int IN3, int IN4, int power_servo_p, int coffee_servo_p, int vib_p) : AccelStepper(HALF4WIRE, IN1, IN2, IN3, IN4), Servo()
+  {
+    setMaxSpeed(MAX_SPEED);
+    setAcceleration(ACCELERATION);
+    filter_open = false;
+    currently_brewing = false;
+    brew_hour = 7;
+    brew_min = 0;
+    brewing_scheduled = false;
+    power_on = false;
+    filter_moving = false;
+  }
 
-  // Bool functions:
-  bool shouldBrewNow(int hr, int min); //compared hr, min with brew time and returns if time to brew. Make sure not runs multiple times in loop...
-  bool isOn(int hr, int min); // compares hr, min with power_pressed_h/m and returns false is <1hr since pressed
-  void update(int hr, int min); // I want this to change condition of power_pressed when sufficient time passes.
-  bool allowFilterChange(); // returns true if it is possible to change filter at curents time
+  
+  bool timeToBrew();
+  void powerOn();
+  void fillCoffee();
+  void openFilter();
+  void closeFilter();
+  void update(int curr_hour, int curr_min);
 
-  bool getFillingCoffee();
-  int getCoffeeMinutes();
-  int getCoffeeHours();
-  bool getFilterState(); // true if ready, false if used
+  void setBrewSchedule(int hour, int min);
+
+  int getVibPin();
+  int getBrewMin();
+  int getBrewHour();
   bool getFilterOpen();
-  bool getScheduledCoffee();
-  int getBrewStartHour();
   bool getCurrentlyBrewing();
+  bool getBrewingScheduled();
 
-  void setBrewSchedule(int coffee_hr, int coffee_min); // set time to brew and sceduled_coffee=true 
-  void setPowerPressed(int coffee_pressed_h, int coffee_pressed_m, bool power_pressed);
-  void setFilterOpen(bool opened_filter);
-  void setFillingCoffee(bool filling_coffee);
-  void setFilterState(bool new_filter);
-  void setCurrentlyBrewing(bool currently_brewing);
 };
