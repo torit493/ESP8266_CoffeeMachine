@@ -1,102 +1,118 @@
 #include "CoffeeMachine.h"
 
-CoffeeMachine::CoffeeMachine(int coffee_hr, int coffee_min, bool scheduled_coffee){
-  this->coffee_hr=coffee_hr;
-  this->coffee_min=coffee_min;
-  this->scheduled_coffee=scheduled_coffee;
-  new_filter = false;
-  opened_filter = false;
-  power_pressed = false;
-  filling_coffee = false;
-  currently_brewing = false;
-  power_pressed_h = -1; // Im thinking this is best? Cannot be mistaken and lets us know nothing has been pressed...
-  power_pressed_m = -1;
-}
-
-bool CoffeeMachine::shouldBrewNow(int hr, int min){
-  if (hr == coffee_hr && min == coffee_min && scheduled_coffee && new_filter){
-    power_pressed_h = hr;
-    power_pressed_m = min;
+bool CoffeeMachine::timeToBrew(){
+  if (curr_hour == brew_hour && curr_min == brew_min && !currently_brewing && !filter_open){
     currently_brewing = true;
     return true;
   }
   return false;
 }
 
-bool CoffeeMachine::isOn(int hr, int min){
-  if (power_pressed){
-    return true;
+void CoffeeMachine::powerOn(){
+  attach(power_servo_p);
+  int curr_angle = zero_deg;
+  while(curr_angle < power_deg){
+    curr_angle += 1;
+    write(zero_deg + curr_angle);
+    delay(delay_time); // To chill on the pressing speed.
+  }
+  while(curr_angle > zero_deg){
+    curr_angle -= 1;
+    write(zero_deg + curr_angle);
+    delay(delay_time); // To chill on the pressing speed.
+  }
+  detach();
+  power_on = true;
+}
+
+void CoffeeMachine::fillCoffee(){
+  attach(coffee_servo_p);
+  int curr_angle = zero_deg;
+  while(curr_angle < coffee_deg){
+    curr_angle += 1;
+    write(zero_deg + curr_angle);
+    delay(delay_time); // To chill on the pressing speed.
+  }
+
+  signed long vib_start = millis();
+  while (millis() < vib_start + fill_time){
+    digitalWrite(vib_p, HIGH);
+    delay(30);
+    digitalWrite(vib_p, LOW);
+    delay(10);
+  }
+
+  while(curr_angle > zero_deg){
+    curr_angle -= 1;
+    write(zero_deg + curr_angle);
+    delay(delay_time); // To chill on the pressing speed.
+  }
+  detach();
+}
+
+void CoffeeMachine::openFilter(){
+  if (!filter_open && !filter_moving){
+    moveTo(open_filter_steps);
+    filter_moving = true;
+  }else if (distanceToGo() == 0 && filter_moving){
+    filter_open = true;
+    filter_moving = false;
+    Serial.println("set filter_open=true and filter_moving=false");
+  }else if (filter_moving){
+    run();
+    Serial.println(distanceToGo());
   }
 }
 
-void CoffeeMachine::update(int hr, int min){ // I want to say that power is not pressed anymore after one hour has passed from brew start.
-  if (power_pressed && hr > coffee_hr){
-    power_pressed = false;
+void CoffeeMachine::closeFilter(){
+  if (filter_open && !filter_moving){
+    moveTo(close_filter_steps);
+    filter_moving = true;
+  }else if (distanceToGo() == 0 && filter_moving){
+    filter_open = false;
+    filter_moving = false;
+    Serial.println("set filter_open=false and filter_moving=false");
+  }else  if (filter_moving){
+    run();
+    Serial.println(distanceToGo());
   }
 }
 
-bool CoffeeMachine::allowFilterChange(){
-  if (!currently_brewing){
-    return true;
+void CoffeeMachine::update(int curr_hour, int curr_min){ // Make sure this updates everything thats need to be updated with respect to time
+  this->curr_hour = curr_hour;
+  this->curr_min = curr_min;
+  signed long seconds_passed = (curr_hour*3600 + curr_min*60) - (brew_hour*3600 + brew_min*60);
+  if (seconds_passed > 0 && seconds_passed > brew_time){
+    currently_brewing = false;
+    power_on = false;
   }
 }
 
-void CoffeeMachine::setBrewSchedule(int coffee_hr, int coffee_min){
-  this->coffee_hr=coffee_hr;
-  this->coffee_min=coffee_min;
-  scheduled_coffee=true;
+void CoffeeMachine::setBrewSchedule(int hour, int min){
+  brew_hour = hour;
+  brew_min = min;
 }
 
-void CoffeeMachine::setPowerPressed(int coffee_pressed_h, int coffee_pressed_m, bool power_pressed){
-  this->power_pressed = power_pressed;
-  this->power_pressed_h=power_pressed_h;
-  this->power_pressed_m=power_pressed_m;
+int CoffeeMachine::getVibPin(){
+  return vib_p;
 }
 
-void CoffeeMachine::setFilterOpen(bool opened_filter){
-  this->opened_filter = opened_filter;
+int CoffeeMachine::getBrewMin(){
+  return brew_min;
+}
+
+int CoffeeMachine::getBrewHour(){
+  return brew_hour;
 }
 
 bool CoffeeMachine::getFilterOpen(){
-  return opened_filter;
-}
-
-void CoffeeMachine::setFillingCoffee(bool filling_coffee){
-  this->filling_coffee=filling_coffee;
-}
-
-bool CoffeeMachine::getFillingCoffee(){
-  return filling_coffee;
-}
-
-int CoffeeMachine::getCoffeeMinutes(){
-  return coffee_min;
-}
-
-int CoffeeMachine::getCoffeeHours(){
-  return coffee_hr;
-}
-
-void CoffeeMachine::setFilterState(bool new_filter){
-  this->new_filter = new_filter;
-}
-
-bool CoffeeMachine::getFilterState(){
-  return new_filter;
-}
-
-bool CoffeeMachine::getScheduledCoffee(){
-  return scheduled_coffee;
-}
-
-int CoffeeMachine::getBrewStartHour(){
-  return power_pressed_h;
+  return filter_open;
 }
 
 bool CoffeeMachine::getCurrentlyBrewing(){
   return currently_brewing;
 }
 
-void CoffeeMachine::setCurrentlyBrewing(bool currently_brewing){
-  this->currently_brewing = currently_brewing;
+bool CoffeeMachine::getBrewingScheduled(){
+  return brewing_scheduled;
 }
