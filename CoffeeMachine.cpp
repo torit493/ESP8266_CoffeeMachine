@@ -1,7 +1,7 @@
 #include "CoffeeMachine.h"
 
 bool CoffeeMachine::timeToBrew(){
-  if (curr_hour == brew_hour && curr_min == brew_min && !currently_brewing && !filter_open){
+  if (curr_hour == brew_hour && curr_min == brew_min && !currently_brewing && !filter_open && brewing_scheduled){
     currently_brewing = true;
     return true;
   }
@@ -9,7 +9,6 @@ bool CoffeeMachine::timeToBrew(){
 }
 
 void CoffeeMachine::powerOn(){
-  attach(power_servo_p);
   int curr_angle = zero_deg;
   while(curr_angle < power_deg){
     curr_angle += 1;
@@ -21,33 +20,49 @@ void CoffeeMachine::powerOn(){
     write(zero_deg + curr_angle);
     delay(delay_time); // To chill on the pressing speed.
   }
-  detach();
   power_on = true;
+  new_filter = false;
+}
+
+void CoffeeMachine::openCoffeeValve(){
+  int curr_angle = coffee_close_deg; //0
+  while(curr_angle < coffee_open_deg){ //180
+    curr_angle += 1; 
+    write(coffee_close_deg + curr_angle);
+    Serial.println(curr_angle);
+    delay(delay_time); // To chill on the pressing speed.
+  }
+}
+
+void CoffeeMachine::closeCoffeeValve(){
+  int curr_angle = coffee_open_deg;
+  while(curr_angle > coffee_close_deg){
+    curr_angle -= 1;
+    write(coffee_close_deg + curr_angle);
+    delay(delay_time); // To chill on the pressing speed.
+  }
 }
 
 void CoffeeMachine::fillCoffee(){
-  attach(coffee_servo_p);
-  int curr_angle = zero_deg;
-  while(curr_angle < coffee_deg){
-    curr_angle += 1;
-    write(zero_deg + curr_angle);
+  int curr_angle = coffee_close_deg; //0
+  while(curr_angle < coffee_open_deg){ //180
+    curr_angle += 1; 
+    write(coffee_close_deg + curr_angle);
+    Serial.println(curr_angle);
     delay(delay_time); // To chill on the pressing speed.
   }
-
-  signed long vib_start = millis();
-  while (millis() < vib_start + fill_time){
-    digitalWrite(vib_p, HIGH);
-    delay(30);
-    digitalWrite(vib_p, LOW);
-    delay(10);
-  }
-
-  while(curr_angle > zero_deg){
+  vibrate();
+  while(curr_angle > coffee_close_deg){
     curr_angle -= 1;
-    write(zero_deg + curr_angle);
+    write(coffee_close_deg + curr_angle);
     delay(delay_time); // To chill on the pressing speed.
   }
-  detach();
+}
+
+void CoffeeMachine::vibrate(){
+  digitalWrite(vib_p, HIGH);
+  delay(fill_time);
+  digitalWrite(vib_p, LOW);
 }
 
 void CoffeeMachine::openFilter(){
@@ -88,9 +103,35 @@ void CoffeeMachine::update(int curr_hour, int curr_min){ // Make sure this updat
   }
 }
 
+void CoffeeMachine::resetMachine(){
+  filter_open = false;
+  currently_brewing = false;
+  brew_hour = 7;
+  brew_min = 0;
+  brewing_scheduled = false;
+  power_on = false;
+  filter_moving = false;
+  new_filter = true;
+}
+
+void CoffeeMachine::setupCoffeeServo(){
+  write(coffee_close_deg);
+  delay(500);
+  write(coffee_close_deg);
+  delay(500);
+}
+
+void CoffeeMachine::setupPowerServo(){
+  write(zero_deg);
+  delay(500);
+  write(zero_deg);
+  delay(500);
+}
+
 void CoffeeMachine::setBrewSchedule(int hour, int min){
   brew_hour = hour;
   brew_min = min;
+  brewing_scheduled = true;
 }
 
 int CoffeeMachine::getVibPin(){
@@ -115,4 +156,8 @@ bool CoffeeMachine::getCurrentlyBrewing(){
 
 bool CoffeeMachine::getBrewingScheduled(){
   return brewing_scheduled;
+}
+
+bool CoffeeMachine::getNewFilter(){
+  return new_filter;
 }
