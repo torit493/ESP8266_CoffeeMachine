@@ -24,50 +24,26 @@ void CoffeeMachine::powerOn(){
   new_filter = false;
 }
 
-void CoffeeMachine::openCoffeeValve(){
-  int curr_angle = coffee_close_deg; //0
-  while(curr_angle < coffee_open_deg){ //180
-    curr_angle += 1; 
-    write(coffee_close_deg + curr_angle);
-    Serial.println(curr_angle);
-    delay(delay_time); // To chill on the pressing speed.
-  }
-}
-
-void CoffeeMachine::closeCoffeeValve(){
-  int curr_angle = coffee_open_deg;
-  while(curr_angle > coffee_close_deg){
-    curr_angle -= 1;
-    write(coffee_close_deg + curr_angle);
-    delay(delay_time); // To chill on the pressing speed.
-  }
-}
 
 void CoffeeMachine::fillCoffee(){
-  int curr_angle = coffee_close_deg; //0
-  while(curr_angle < coffee_open_deg){ //180
-    curr_angle += 1; 
-    write(coffee_close_deg + curr_angle);
-    Serial.println(curr_angle);
-    delay(delay_time); // To chill on the pressing speed.
-  }
-  vibrate();
-  while(curr_angle > coffee_close_deg){
-    curr_angle -= 1;
-    write(coffee_close_deg + curr_angle);
-    delay(delay_time); // To chill on the pressing speed.
-  }
-}
-
-void CoffeeMachine::vibrate(){
-  digitalWrite(vib_p, HIGH);
+  write(coffee_screw_speed);
   delay(fill_time);
-  digitalWrite(vib_p, LOW);
+  write(coffee_zero_speed);
 }
 
-void CoffeeMachine::openFilter(){
+void CoffeeMachine::openFilter(int position){
+  /** 
+   * Opens filter to position 1 or 2 
+   * 1 = filling position
+   * 2 = fully open
+   * sets filter open variable true in object when done
+    */  
   if (!filter_open && !filter_moving){
-    moveTo(open_filter_steps);
+    if (position == 1){
+      moveTo(open_filter_steps);
+    }else if (position == 2){
+      moveTo(open_filter_fully_steps);      
+    }
     filter_moving = true;
   }else if (distanceToGo() == 0 && filter_moving){
     filter_open = true;
@@ -114,13 +90,6 @@ void CoffeeMachine::resetMachine(){
   new_filter = true;
 }
 
-void CoffeeMachine::setupCoffeeServo(){
-  write(coffee_close_deg);
-  delay(500);
-  write(coffee_close_deg);
-  delay(500);
-}
-
 void CoffeeMachine::setupPowerServo(){
   write(zero_deg);
   delay(500);
@@ -132,10 +101,6 @@ void CoffeeMachine::setBrewSchedule(int hour, int min){
   brew_hour = hour;
   brew_min = min;
   brewing_scheduled = true;
-}
-
-int CoffeeMachine::getVibPin(){
-  return vib_p;
 }
 
 int CoffeeMachine::getBrewMin(){

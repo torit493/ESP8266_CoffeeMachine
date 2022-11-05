@@ -31,8 +31,7 @@ uint8_t IN3           = D7;
 uint8_t IN4           = D6;
 uint8_t power_servo_p = D5;
 uint8_t coffee_servo_p= D4;
-uint8_t vib_p         = D3;                                           // Pulled high on boot, fails if pulled low (Maybe D8 is better? ->pulled low on boot, fails if pulled high)
-CoffeeMachine TITsBraun = CoffeeMachine(IN1, IN2, IN3, IN4, power_servo_p, coffee_servo_p, vib_p);
+CoffeeMachine TITsBraun = CoffeeMachine(IN1, IN2, IN3, IN4, power_servo_p, coffee_servo_p);
 //######################################################################
 
 //######################################################################
@@ -119,7 +118,7 @@ void openFilter(){
     temp = temp + "Currently brewing, please wait before opening." + ending;
   }else{
     while (!TITsBraun.getFilterOpen()){
-      TITsBraun.openFilter();
+      TITsBraun.openFilter(2); // 1 will open for filling coffee, 2 will open for changing filter
     }
     temp = temp + "Filter fully open now." + ending;
   }
