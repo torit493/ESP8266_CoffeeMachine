@@ -14,7 +14,7 @@ class CoffeeMachine : public AccelStepper, public Servo{
   const int close_filter_steps      = 0;
   const int zero_deg                = 0;        // zero deg for power servo
   const int power_deg               = 95;       // deg to press power
-  const int coffee_screw_speed      = 80;       // using a continuously rotating servo
+  const int coffee_screw_speed      = 40;       // using a continuously rotating servo
   const int coffee_zero_speed       = 76;       // ~76 means no rotation
   const int delay_time              = 10;       // milliseconds. For slowing down servo movement.
   const int fill_time               = 3000;     // milliseconds. needs to be figured out later, maybe add one for half a litre and one for one cup?
