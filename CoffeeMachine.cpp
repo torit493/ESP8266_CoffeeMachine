@@ -62,6 +62,7 @@ void CoffeeMachine::closeFilter(){
   }else if (distanceToGo() == 0 && filter_moving){
     filter_open = false;
     filter_moving = false;
+    clean_filter = true;                                  // Need to pay attention to this. Convenient as when machine finishes it opens filter and sets it to dirty. When closing the filter, which needs to be done manually it will be put to clean again automatically.
     Serial.println("set filter_open=false and filter_moving=false");
   }else  if (filter_moving){
     run();
@@ -103,6 +104,16 @@ void CoffeeMachine::setBrewSchedule(int hour, int min){
   brewing_scheduled = true;
 }
 
+void CoffeeMachine::setStepperClosed(){
+  setCurrentPosition(close_filter_steps);
+  filter_open = false;
+}
+
+void CoffeeMachine::setStepperOpened(){
+  setCurrentPosition(open_filter_fully_steps);
+  filter_open = true;
+}
+
 int CoffeeMachine::getBrewMin(){
   return brew_min;
 }
@@ -111,7 +122,7 @@ int CoffeeMachine::getBrewHour(){
   return brew_hour;
 }
 
-bool CoffeeMachine::getFilterOpen(){
+bool CoffeeMachine::getFilterOpen(){ // This could maybe return true if currentPosition() == open_filter_steps or false if !=? Would require one less member variable.
   return filter_open;
 }
 
@@ -125,4 +136,14 @@ bool CoffeeMachine::getBrewingScheduled(){
 
 bool CoffeeMachine::getNewFilter(){
   return new_filter;
+}
+
+String CoffeeMachine::getMachineInfo(){
+  String temp = "Coffee Filter: open_filter_fully_steps = " + String(open_filter_fully_steps) + ", " + "open_filter_steps = " + String(open_filter_steps) + ", " + "close_filter_steps = "  +  String(close_filter_steps) + "<br>";
+  temp += "Power presser: zero_deg = " + String(zero_deg) +"deg, power_deg = " + String(power_deg) + "deg, delay_time = " + String(delay_time) + "ms.<br>";
+  temp += "Archimedes screw: coffee_screw_zero_speed = " + String(coffee_zero_speed) + "deg, coffee_screw_speed = " + String(coffee_screw_speed) + "deg.<br>";
+  temp += "Filling coffee: fill_time = " + String(fill_time) + "ms.<br>";
+  temp += "Filter_open = "+ String(filter_open) + "power_on = " + String(power_on) + "deg, currently_brewing = " +  String(currently_brewing) + "brewing_scheduled = " + String(brewing_scheduled) + "filter_moving = " + String(filter_moving) + "new_filter = "  + String(new_filter) + ".<br>";
+  temp += "Timer stuff: curr_hour = " + String(curr_hour) + "curr_min = " + String(curr_min) + "brew_hour = " + String(brew_hour) + "brew_min = " + String(brew_min) + ".<br>";
+  return temp;
 }

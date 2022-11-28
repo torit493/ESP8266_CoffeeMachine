@@ -13,9 +13,9 @@ const char* password = "AEYE9U43PN3VE";                               // The pas
 ESP8266WebServer server(80);                                          // setting server port to 80 (FOR SOME REASON? IMPORTANT NUMBER??)
 IPAddress local_IP(192, 168, 0, 22);
 IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 0, 0);
-// String header;   //DONT THINK I USE THIS?                          // variable to store the HTTP request
-// HTTPClient http; // OR THIS?                                       // client used to listen for incoming clients in loop
+IPAddress subnet(255, 255, 255, 0);
+IPAddress primaryDNS(8, 8, 8, 8);   //NOT optional, although it says so online. You will connect, but wont be able to set time without these...
+IPAddress secondaryDNS(8, 8, 4, 4); //NOT optional
 //######################################################################
 
 //Clock stuff:##########################################################
@@ -64,6 +64,7 @@ void info(){
           "<a href=\"/status\">Display current status</a> &emsp;&#8594; information on scheduled brewing<br>"
           "<a href=\"/updateTimeClient\">Update the timeClient</a> &ensp;&nbsp;&thinsp;&#8594; Updating time for time client.<br>"
           "<a href=\"/resetMachine\">Reset CoffeeMachine</a> &emsp;&#8594; Careful with this one. For testing code.<br>"
+          "<a href=\"/enableMorningBrew\">Put to brew at 0630</a> &emsp;&ensp;&#8594; morning routine.<br>"
           + ending;
   server.send(200,"text/html", temp);
 }
@@ -82,18 +83,9 @@ while(!timeClient.update()){
 }
 
 void status(){
-  String temp = head + "Clock set to: " + timeClient.getHours() + ":" + timeClient.getMinutes();
-  if (TITsBraun.getBrewingScheduled() && !TITsBraun.getFilterOpen()){
-    temp = temp + "<br>Set to brew at: " + TITsBraun.getBrewHour() + ":" + TITsBraun.getBrewMin() + ". ";
-  }else if (TITsBraun.getCurrentlyBrewing()){
-    temp = temp + "<br>Unless you drank all the coffee insanely fast there is currently coffee ready! :D";
-  }else{
-    temp = temp + "<br>No brewing sceduled.";
-  }
-  if (TITsBraun.getFilterOpen()){
-    temp = temp + "<br>The filter is open so you can change it!";
-  }
-  temp = temp + ending;
+  String temp = head + "Clock set to: " + timeClient.getHours() + ":" + timeClient.getMinutes() + "<br>";
+  temp += TITsBraun.getMachineInfo();
+  temp += ending;
   server.send(200, "text/html", temp);
 }
 
@@ -139,5 +131,23 @@ void brewNow(){
 void resetMachine(){
   String temp = head + "reset coffee machine parameters." + ending;
   TITsBraun.resetMachine();
+  server.send(200, "text/html", temp);
+}
+
+void enableMorningBrew(){
+  TITsBraun.setBrewSchedule(6, 30);
+  String temp = head + "set to brew coffee at " + String(TITsBraun.getBrewHour()) + String(TITsBraun.getBrewMin()) + ending;
+  server.send(200, "text/html", temp);
+}
+
+void setStepperClosed(){
+  String temp = head + "set current position of stepper to closed steps" + ending;
+  TITsBraun.setStepperClosed();
+  server.send(200, "text/html", temp);
+}
+
+void setStepperOpened(){
+  String temp = head + "set current position of stepper to opened steps" + ending;
+  TITsBraun.setStepperOpened();
   server.send(200, "text/html", temp);
 }
